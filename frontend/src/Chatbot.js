@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./Chatbot.css";
 
-const API = "http://localhost:5000/api/chat"; // later replace with Render backend URL
+const API = "http://localhost:5000/api/chat"; // replace after deployment
 
 function Chatbot() {
   const [messages, setMessages] = useState([
@@ -10,6 +10,7 @@ function Chatbot() {
       sender: "bot",
       text: "👋 Hi! I’m CampusBot — your AI Helpdesk Assistant. How can I help you today?",
       time: new Date().toLocaleTimeString(),
+      type: "text",
     },
   ]);
 
@@ -17,12 +18,12 @@ function Chatbot() {
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
 
-  // ✅ Auto scroll to the latest message
+  // Auto-scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ✅ Send message to backend / AI
+  // Send message
   const sendMessage = async (retryText = null) => {
     const userMessage = retryText || input.trim();
     if (!userMessage) return;
@@ -31,29 +32,34 @@ function Chatbot() {
       sender: "user",
       text: userMessage,
       time: new Date().toLocaleTimeString(),
+      type: "text",
     };
+
     setMessages((prev) => [...prev, newUserMsg]);
     setInput("");
     setLoading(true);
 
     try {
       const res = await axios.post(API, { message: userMessage });
-      const reply = res.data.reply || "✅ Connected to CampusBot backend successfully!";
 
       const newBotMsg = {
         sender: "bot",
-        text: reply,
+        text: res.data.reply,
+        fileUrl: res.data.fileUrl || null,
+        title: res.data.title || null,
         time: new Date().toLocaleTimeString(),
+        type: res.data.type || "text", // text or file
       };
+
       setMessages((prev) => [...prev, newBotMsg]);
     } catch (err) {
-      console.error("Chat error:", err);
       setMessages((prev) => [
         ...prev,
         {
           sender: "bot",
-          text: "⚠️ CampusBot is not responding right now. Please try again later.",
+          text: "⚠️ CampusBot is not responding right now.",
           time: new Date().toLocaleTimeString(),
+          type: "text",
         },
       ]);
     }
@@ -61,22 +67,22 @@ function Chatbot() {
     setLoading(false);
   };
 
-  // ✅ Copy response to clipboard
+  // Copy text
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    alert("✅ Message copied to clipboard!");
+    alert("Copied!");
   };
 
-  // ✅ Share response via mobile/share API
+  // Share message
   const shareMessage = (text) => {
     if (navigator.share) {
       navigator.share({
-        title: "CampusBot – AI Helpdesk Assistant",
-        text,
+        title: "CampusBot",
+        text: text,
       });
     } else {
       navigator.clipboard.writeText(text);
-      alert("📋 Copied message to share manually!");
+      alert("Copied (Share not supported)!");
     }
   };
 
@@ -88,17 +94,47 @@ function Chatbot() {
         {messages.map((msg, i) => (
           <div key={i} className={`chat-message ${msg.sender}`}>
             <div className="chat-bubble">
-              <p>{msg.text}</p>
 
+              {/* TEXT MESSAGE */}
+              {msg.type === "text" && <p>{msg.text}</p>}
+
+              {/* FILE MESSAGE */}
+              {msg.type === "file" && (
+                <div>
+                  <p>{msg.text}</p>
+
+                  <div className="file-card">
+                    <strong>📄 {msg.title}</strong>
+                    <br />
+                    <a
+                      href={msg.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="open-btn"
+                    >
+                      Open File
+                    </a>
+
+                    <a
+                      href={msg.fileUrl}
+                      download
+                      className="download-btn"
+                    >
+                      Download
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Time + Copy + Share + Retry */}
               <div className="chat-meta">
                 <span>{msg.time}</span>
 
-                {msg.sender === "bot" && (
+                {msg.sender === "bot" && msg.type === "text" && (
                   <div className="chat-actions">
-                    <button title="Copy" onClick={() => copyToClipboard(msg.text)}>📋</button>
-                    <button title="Share" onClick={() => shareMessage(msg.text)}>📤</button>
+                    <button onClick={() => copyToClipboard(msg.text)}>📋</button>
+                    <button onClick={() => shareMessage(msg.text)}>📤</button>
                     <button
-                      title="Try Again"
                       onClick={() =>
                         sendMessage(messages[messages.length - 2]?.text)
                       }
@@ -111,14 +147,15 @@ function Chatbot() {
             </div>
           </div>
         ))}
-        <div ref={chatEndRef} />
+        <div ref={chatEndRef}></div>
       </div>
 
+      {/* INPUT */}
       <div className="chat-input">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about exams, syllabus, timetable..."
+          placeholder="Ask about exams, notices, timetable, PYQ..."
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
         <button onClick={() => sendMessage()} disabled={loading}>

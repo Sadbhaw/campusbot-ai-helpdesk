@@ -90,3 +90,30 @@
   border-radius: 8px;
   cursor: pointer;
 }
+
+.file-card {
+  padding: 10px;
+  margin-top: 8px;
+  background: #f2f3f7;
+  border-radius: 6px;
+  border-left: 4px solid #4b7bec;
+}
+
+.open-btn, .download-btn {
+  display: inline-block;
+  margin-top: 6px;
+  margin-right: 10px;
+  padding: 6px 12px;
+  background: #4b7bec;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+}
+
+.download-btn {
+  background: #20bf6b;
+}
+
+.open-btn:hover, .download-btn:hover {
+  opacity: 0.85;
+}
